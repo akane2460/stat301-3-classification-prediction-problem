@@ -1,0 +1,111 @@
+---
+title: "Classification Prediction Problem Memo"
+subtitle: |
+  | Final Project 
+  | Data Science 3 with R (STAT 301-3)
+author:
+  - name: Allison Kane
+date: today
+
+format:
+  html:
+    toc: true
+    toc-location: left
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+
+## Github Repo Link
+
+[Classification Prediction Problem Link](https://github.com/stat301-3-2024-spring/classification-pred-prob-akane2460)
+
+:::
+
+::: {.callout-tip icon=false}
+
+## Prediction Problem
+
+Predicting the superhost status of an AirBnB host.
+
+:::
+
+## Introduction
+Using travel accommodation websites like AirBnB can make traveling easier. However, there are risks to booking online. Sometimes, what a traveler books might not be exactly what they receive when checking in. AirBnB's *superhost* distinction identifies AirBnB hosts that stand out as excellent AirBnB hosts. This could be due to an AirBnB's amenities, its location, its reviews and other factors. In this analysis, which factors drive a host to become a superhost were explored and two models were selected to predict superhost status. These models had an area under the curve (ROC-AUC) of approximately .93182^[final_attempt_5] and .91978^[final_attempt_10], employing various model types and recipe approaches to predicting if a host is a superhost. These models will be explored based on their performance on a prescribed testing set and their potential performance on more general AirBnB data. 
+
+## Data Inspection
+### Data Cleaning
+Upon initial inspection of the data, there was missingness noted and rectified during the recipe step. The target variable conveying the superhost status was fairly balanced, with slightly fewer hosts labeled as superhosts.
+
+![Regular Host vs. Superhost Distribution](plots/superhost_dist_plot.png)
+
+A large number of factor variables exhibited many different levels, which could pose issues in ensuring consistent representation across training and testing datasets. This was later rectified recipe formation step. Interactions between variables were explored and identified, like the number of beds and the number of bathrooms in a property for example.
+
+### Important Variables
+Using a lasso approach, variable selection was performed. Some variables, like the AirBnB's longitude coordinates, did not contribute substantially to the model's ability to predict superhost status. Inclusions of these variables were explored in different recipes and model approaches. Interactions between variables that contributed substantially to the model's ability to predict superhost status were considered in more depth in recipe specifications. 
+
+## Recipe Formation
+### Simple Recipe
+  The explorations conducted before recipe formation shaped the simple, advanced, and additional advanced recipes. In the simple recipe, the id variable was removed first. Next, missingness was handled imputing numeric variables with their median value and factor variables with their mode value. Next, the factor variables underwent dummy-ing to make the data appropriate for different model types. Potential novel levels, like new neighborhoods in the testing set that were not present in the training set, were accounted for using a novel step. Highly correlated variables were removed to reduce multicollinearity. Predictors with near-zero variance were removed and all remaining predictors were normalized. 
+  
+### Advanced Recipe
+  In the advanced recipe, variables that contributed marginally to the models' ability to predict superhost status (identified in our lasso approach) were removed. Some of these included the property's longitude coordinate, the number of people allowed in the Airbnb (accommodates) and if the property could be booked 90 days in advance. These were removed just before addressing highly correlated and near-zero variance variables and normalizing steps.
+
+### Advanced Recipe
+  In the additional advanced recipe, interactions between particularly relevant variables, like the location reviews and the neighborhood where the property is located, were explored. Further interactions between variables describing property location (like latitude coordinate) were explored as well. Additionally, interactions between variables describing length of stay minimums and maximums and variables like the number of listings were explored. This could be relevant as longer stays (multiple weeks or months) might make listing the property less frequent than shorter stays (couple of days). Interactions between ability to book up to 90 days in advance and 1 year in advance were included. Variables conferring the type of room or property, like room type or number of bathrooms, were explored in their interactions with each other (for example number of beds and number of bathrooms) and customer reviews (since different amenities or types of rooms might provide a more positive stay than others).
+
+## Choice No. 1: Best Performing Model
+The best performing model^[final_attempt_5] is an ensemble model with boosted tree, random forest and K-nearest neighbors components. This model was trained on the simple recipe, which produced more consistent results that were easier to generalize relative to more advanced recipes. This model predicted superhost identity with an accuracy of .93182, indicating that it predicted accurate superhost identity for 93.182% of the testing data's observations.
+
+![Final Model Choice 1: Ensemble Contributor Weights](plots/attempt_5_weights_plot.png)
+
+#### Boosted Model Contributions and Optimal Parameters
+|member                    | mtry| min_n| learn_rate|      coef|
+|:-------------------------|----:|-----:|----------:|---------:|
+|boosted_tuned_simple_1_01 |   10|     2|   1.870306| 0.7387965|
+|boosted_tuned_simple_1_07 |   12|     6|  51.215845| 0.0009146|
+|boosted_tuned_simple_1_09 |   11|     0|   1.562574| 1.2988293|
+|boosted_tuned_simple_1_11 |   11|     3|   1.023415| 0.7785575|
+|boosted_tuned_simple_1_13 |   11|     0|  23.034740| 0.0953723|
+|boosted_tuned_simple_1_19 |    8|     4|  79.070262| 0.1662415|
+
+#### KNN Model Contributions and Optimal Parameters
+|member                | neighbors|      coef|
+|:---------------------|---------:|---------:|
+|knn_tuned_simple_1_01 |         4| 0.5983642|
+|knn_tuned_simple_1_02 |         5| 0.3893040|
+|knn_tuned_simple_1_03 |         6| 0.0651367|
+|knn_tuned_simple_1_04 |         7| 0.1525073|
+|knn_tuned_simple_1_05 |         8| 0.0892225|
+|knn_tuned_simple_1_06 |         9| 0.0024657|
+
+#### Random Forest Contributions and Optimal Parameters
+|member               | mtry| min_n|     coef|
+|:--------------------|----:|-----:|--------:|
+|rf_tuned_simple_1_15 |    9|     2| 2.590588|
+
+In this model, the random forest model typically sees greater contributions, outweighing all other models considered. Boosted tree models contributed substantially as well, outweighing K-nearest neighbors contributions slightly. The optimal parameters indicate that the largest (non-zero) random forest contributor performs best at an mtry setting of 9 and a minimum observations of 2. The largest contributing K-NN model has an optimal number of 7 neighbors. The largest contributing boosted tree model had an optimal number of 0 minimum observations, with an mtry setting of 11 and a learn rate of approximately 1.56.
+
+## Choice No. 2
+The other chosen model^[final_attempt_10] is a random forest model. This model was trained on the simple recipe and was explored specifically because it was the greatest contributor to the previously chosen ensemble model. For non-leaderboard predictions, this model could provide better predictions in relying on the best performing model approach. This model predicted superhost identity with an accuracy of .91978, indicating that it predicted accurate superhost identity for 91.978% of the testing data's observations.
+
+#### Random Forest Model Contributions and Optimal Parameters
+| mtry | min_n | .config               |
+|-----:|------:|:----------------------|
+|    9 |     1 | Preprocessor1_Model10 |
+
+In this model, the optimal minimum number of observations for random forest was 1, with an optimal mtry value (number of parameters to randomly select at each branch) of 9. This more simple approach could be beneficial in preventing overfitting relative to the selected ensemble model approach.
+
+## Reaching Final Models
+In initial attempts, various model types were utilized, including advanced and additional advanced recipe model types. In these attempts, generally boosted, KNN, and random forest models seemed to contribute more to ensemble models, making them a viable candidate for exploration in the final model types. Though the advanced and additional advanced models provided more specific recipe formation, they were not considered for final models as they could potentially be overfitting the training set data. The simple recipe model based on random forest and ensemble (random forest, KNN, boosted tree) contributors were ultimately selected.
+
+# Conclusion
+Overall, there are two selected models that accurately predict AirBnB superhost status. These models were obtained through the dataset cleaning and inspection, careful recipe formation, and inspection of previous ensemble models to identify the best contributing model types. One model is more elaborate, using a simple recipe and ensemble model approach, while the other is simpler, employing the same recipe but only one model type contributing.
